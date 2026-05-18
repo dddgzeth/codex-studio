@@ -9,4 +9,4 @@ npm-debug.log*
 crypto-quant-dashboard.html
 crypto-spot-arbitrage.md
 *.md
-!README.md
+!README*.md
