@@ -1,0 +1,12 @@
+node_modules
+dist
+.app-data
+.generated-ts
+.generated-schema
+npm-debug.log*
+.DS_Store
+.claude/
+images/
+crypto-quant-dashboard.html
+crypto-spot-arbitrage.md
+*.md

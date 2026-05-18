@@ -1,0 +1,28 @@
+{
+  "name": "codex-browser-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --enable-source-maps --import tsx src/server/index.ts",
+    "start": "node --enable-source-maps dist/server/index.js",
+    "build": "tsc -p tsconfig.json",
+    "app": "npm run dev",
+    "setup": "npm install",
+    "check-env": "node scripts/check-env.mjs",
+    "arb:demo": "node --enable-source-maps --import tsx src/arb/cli.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "express": "^4.21.2",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.15.21",
+    "@types/ws": "^8.5.14",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

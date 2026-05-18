@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codex Workbench</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- LEFT SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <div class="brand-logo"><i data-lucide="terminal-square"></i></div>
+                    <span class="brand-name">Codex</span>
+                </div>
+                <div class="workspace-container">
+                    <i data-lucide="folder" class="input-icon"></i>
+                    <input type="text" id="workspace-input" placeholder="/path/to/workspace">
+                </div>
+                <div class="sidebar-actions">
+                    <button id="new-session-button" class="btn btn-primary">
+                        <i data-lucide="plus"></i> New Session
+                    </button>
+                    <button id="refresh-list-button" class="btn btn-icon btn-ghost" title="Refresh">
+                        <i data-lucide="refresh-cw"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <div class="sidebar-section-title kicker">Recent Sessions</div>
+                <div id="session-list" class="session-list"></div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            <!-- TOP BAR -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1 id="session-title" class="subtle">Select a session</h1>
+                    <span id="session-meta" class="status-pill"></span>
+                </div>
+                <div class="top-bar-right">
+                    <div class="search-container">
+                        <i data-lucide="search" class="search-icon"></i>
+                        <input type="text" id="search-input" placeholder="Search session...">
+                        <button id="search-button" class="btn btn-icon btn-tiny"><i data-lucide="arrow-right"></i></button>
+                    </div>
+                    <div id="search-results" class="search-results hidden"></div>
+                    <div class="toolbar-divider"></div>
+                    <button id="export-md-button" class="btn btn-ghost btn-small" title="Export as Markdown"><i data-lucide="file-text"></i> Export MD</button>
+                    <button id="export-html-button" class="btn btn-ghost btn-small" title="Export as HTML"><i data-lucide="file-code"></i> Export HTML</button>
+                    <button id="interrupt-button" class="btn btn-ghost btn-small" title="Interrupt"><i data-lucide="square"></i></button>
+                    <button id="context-toggle-button" class="btn btn-ghost btn-small" title="Toggle Context"><i data-lucide="panel-right"></i></button>
+                </div>
+            </header>
+
+            <!-- CONVERSATION STREAM -->
+            <div id="session-content" class="session-content empty-state">
+                <div class="empty-state-body">
+                    <div class="empty-state-icon"><i data-lucide="zap"></i></div>
+                    <h3>Start Coding with Codex</h3>
+                    <p class="subtle">Select or create a session to begin.</p>
+                </div>
+            </div>
+
+            <!-- FLOATING COMPOSER -->
+            <div class="composer-container">
+                <div class="composer-box">
+                    <textarea id="composer-input" placeholder="Ask Codex to write code, explain files, or run commands... `/commands` are passed through directly."></textarea>
+                    <div class="composer-actions">
+                        <div class="composer-left">
+                            <div class="format-toggle">
+                                <button id="fmt-md" class="fmt-btn active" title="Markdown — structured block rendering">MD</button>
+                                <button id="fmt-html" class="fmt-btn" title="HTML — agent outputs a full HTML document">HTML</button>
+                            </div>
+                            <span class="composer-hints subtle"><kbd>⌘</kbd>+<kbd>Enter</kbd> to send · <kbd>Esc</kbd> to stop</span>
+                        </div>
+                        <div class="composer-buttons">
+                            <button id="stop-button" class="btn btn-stop hidden" title="Stop (Esc)">
+                                <i data-lucide="square"></i> Stop
+                            </button>
+                            <button id="send-button" class="btn btn-primary btn-icon" title="Send (⌘Enter)">
+                                <i data-lucide="send"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT CONTEXT PANEL -->
+        <aside id="context-panel" class="context-panel hidden">
+            <div class="context-header">
+                <h3>Project Context</h3>
+            </div>
+            <div class="context-content">
+                <div class="context-section">
+                    <div class="kicker">Workspace Details</div>
+                    <div id="context-workspace" class="context-list"></div>
+                </div>
+
+                <div class="context-section">
+                    <div class="kicker">Modified Files</div>
+                    <div id="modified-files" class="context-list"></div>
+                </div>
+
+                <div class="context-section">
+                    <div class="kicker">Recent Events</div>
+                    <div id="recent-events" class="context-list"></div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- TEMPLATES FOR APP.JS -->
+    <template id="session-item-template">
+        <button class="session-item">
+            <div class="session-status"></div>
+            <div class="session-details">
+                <span class="session-name"></span>
+                <span class="session-preview subtle"></span>
+            </div>
+        </button>
+    </template>
+
+    <script>lucide.createIcons();</script>
+    <script type="module" src="/app.js"></script>
+</body>
+</html>
