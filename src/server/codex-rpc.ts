@@ -216,6 +216,10 @@ export class CodexRpcClient {
     });
   }
 
+  async renameThread(threadId: string, name: string) {
+    return await this.request("thread/name/set", { threadId, name });
+  }
+
   async archiveThread(threadId: string) {
     return await this.request("thread/archive", { threadId });
   }

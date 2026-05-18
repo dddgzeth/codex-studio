@@ -24,7 +24,8 @@ const els = {
   stopButton: document.querySelector("#stop-button"),
   sendButton: document.querySelector("#send-button"),
   fmtMd: document.querySelector("#fmt-md"),
-  fmtHtml: document.querySelector("#fmt-html")
+  fmtHtml: document.querySelector("#fmt-html"),
+  titleRenameInput: document.querySelector("#title-rename-input")
 };
 
 els.workspaceInput.value = state.workspaceRoot;
@@ -197,7 +198,27 @@ function renderHtmlFragmentBlock(html, filename) {
     if(window.ResizeObserver){new ResizeObserver(report).observe(document.body);}
   })()</script>`;
 
+  // 深色背景自动修复：扫描所有元素，深色底上的深色文字改成浅色
+  const contrastScript = `<script>(function(){
+    var L=function(c){var m=(''+c).match(/\\d+/g);return m?0.299*m[0]+0.587*m[1]+0.114*m[2]:128;};
+    var T=function(c){return !c||c==='transparent'||c==='rgba(0, 0, 0, 0)'||c==='rgba(0,0,0,0)';};
+    var fix=function(){
+      [].forEach.call(document.querySelectorAll('*'),function(el){
+        var bg=getComputedStyle(el).backgroundColor;
+        if(T(bg)||L(bg)>=100)return;
+        [el].concat([].slice.call(el.querySelectorAll('*'))).forEach(function(child){
+          var cbg=getComputedStyle(child).backgroundColor;
+          if(child!==el&&!T(cbg)&&L(cbg)<100)return;
+          if(L(getComputedStyle(child).color)<160)child.style.color='#f0f0f0';
+        });
+      });
+    };
+    window.addEventListener('load',fix);
+    setTimeout(fix,500);
+  })()</script>`;
+
   const srcdocContent = `<!DOCTYPE html><html><head><meta charset="utf-8">
+${contrastScript}
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   body { font-family: -apple-system, 'Segoe UI', sans-serif; padding: 24px 28px; margin: 0;
@@ -212,8 +233,8 @@ function renderHtmlFragmentBlock(html, filename) {
   a { color: #6366f1; text-underline-offset: 2px; }
   code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.82em;
          background: #f4f4f5; border-radius: 4px; padding: 2px 6px; color: #6366f1; }
-  pre { background: #1e1e2e; border-radius: 10px; padding: 16px 18px; overflow-x: auto; margin: 0 0 14px; }
-  pre code { background: none; padding: 0; color: #cdd6f4; font-size: 0.84em; }
+  pre { background: #1e1e2e !important; border-radius: 10px; padding: 16px 18px; overflow-x: auto; margin: 0 0 14px; }
+  pre code { background: none !important; padding: 0 !important; color: #cdd6f4 !important; font-size: 0.84em; }
   blockquote { border-left: 3px solid #6366f1; margin: 0 0 14px; padding: 10px 16px;
                background: rgba(99,102,241,0.06); border-radius: 0 6px 6px 0; color: #52525b; }
   table { border-collapse: collapse; width: 100%; margin: 0 0 16px; border-radius: 8px; overflow: hidden; }
@@ -262,7 +283,7 @@ function renderBlock(block) {
 
   if (block.type === "markdown") {
     if (block.role === "user") {
-      return `<section class="block block-user"><span class="block-role-label">You</span>${renderMarkdown(block.text)}</section>`;
+      return `<section class="block block-user"><span class="block-role-label">You</span><p class="user-text">${escapeHtml(block.text)}</p></section>`;
     }
     if (html && looksLikeHtml(block.text)) {
       return renderHtmlFragmentBlock(block.text);
@@ -368,6 +389,95 @@ function renderBlock(block) {
   return `<section class="block"><pre><code>${escapeHtml(JSON.stringify(block, null, 2))}</code></pre></section>`;
 }
 
+async function renameSession(sessionId, newName) {
+  await request(`/api/sessions/${sessionId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name: newName })
+  });
+  const session = state.sessions.find((s) => s.id === sessionId);
+  if (session) session.name = newName;
+  if (state.currentDetail?.summary?.id === sessionId) {
+    state.currentDetail.summary.name = newName;
+  }
+  renderSessions();
+  if (sessionId === state.currentSessionId) {
+    els.sessionTitle.textContent = newName;
+  }
+}
+
+function startTitleRename() {
+  if (!state.currentSessionId) return;
+  const currentName = els.sessionTitle.textContent;
+  els.titleRenameInput.value = currentName;
+  els.sessionTitle.classList.add("hidden");
+  els.titleRenameInput.classList.remove("hidden");
+  els.titleRenameInput.style.width = Math.max(120, Math.min(320, currentName.length * 9)) + "px";
+  els.titleRenameInput.focus();
+  els.titleRenameInput.select();
+
+  let saved = false;
+  function onKeydown(e) {
+    if (e.key === "Enter") { e.preventDefault(); els.titleRenameInput.blur(); }
+    if (e.key === "Escape") {
+      saved = true;
+      els.titleRenameInput.classList.add("hidden");
+      els.sessionTitle.classList.remove("hidden");
+      els.titleRenameInput.removeEventListener("keydown", onKeydown);
+    }
+  }
+  async function onBlur() {
+    if (saved) return;
+    saved = true;
+    const newName = els.titleRenameInput.value.trim();
+    els.titleRenameInput.classList.add("hidden");
+    els.sessionTitle.classList.remove("hidden");
+    els.titleRenameInput.removeEventListener("keydown", onKeydown);
+    if (newName && newName !== currentName) {
+      await renameSession(state.currentSessionId, newName).catch(() => {
+        els.sessionTitle.textContent = currentName;
+      });
+    }
+  }
+  els.titleRenameInput.addEventListener("keydown", onKeydown);
+  els.titleRenameInput.addEventListener("blur", onBlur, { once: true });
+}
+
+function startSidebarRename(session, button) {
+  const nameEl = button.querySelector(".session-name");
+  if (!nameEl) return;
+  const currentName = session.name;
+  const input = document.createElement("input");
+  input.className = "session-rename-inline";
+  input.type = "text";
+  input.value = currentName;
+  input.maxLength = 80;
+  nameEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let saved = false;
+  function onKeydown(e) {
+    if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+    if (e.key === "Escape") {
+      saved = true;
+      input.replaceWith(nameEl);
+      input.removeEventListener("keydown", onKeydown);
+    }
+  }
+  async function onBlur() {
+    if (saved) return;
+    saved = true;
+    const newName = input.value.trim();
+    input.replaceWith(nameEl);
+    input.removeEventListener("keydown", onKeydown);
+    if (newName && newName !== currentName) {
+      await renameSession(session.id, newName).catch(() => {});
+    }
+  }
+  input.addEventListener("keydown", onKeydown);
+  input.addEventListener("blur", onBlur, { once: true });
+}
+
 function renderSessions() {
   const template = document.querySelector("#session-item-template");
   els.sessionList.innerHTML = "";
@@ -408,6 +518,16 @@ function renderSessions() {
       }
     });
 
+    const renameBtn = document.createElement("button");
+    renameBtn.className = "session-rename-btn";
+    renameBtn.title = "Rename session";
+    renameBtn.textContent = "✎";
+    renameBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      startSidebarRename(session, button);
+    });
+    button.appendChild(renameBtn);
+
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "session-delete-btn";
     deleteBtn.title = "Delete session";
@@ -445,6 +565,8 @@ function updateStopButton(isActive) {
 function renderDetail(detail) {
   state.currentDetail = detail;
   els.sessionTitle.textContent = detail.summary.name;
+  els.sessionTitle.classList.add("renameable");
+  els.sessionTitle.title = "Click to rename";
   els.sessionMeta.textContent = `${detail.summary.cwd} · ${formatSessionStatus(detail.summary.status)} · ${new Date(
     detail.summary.updatedAt * 1000
   ).toLocaleString()}`;
@@ -666,6 +788,10 @@ function setOutputFormat(fmt) {
     ? "HTML 模式：表格/步骤/清单等内容以更丰富的视觉呈现"
     : "发消息给 Codex... 切到 HTML 模式可获得更结构化的信息展示";
 }
+
+els.sessionTitle.addEventListener("click", () => {
+  if (state.currentSessionId) startTitleRename();
+});
 
 els.fmtMd.addEventListener("click", () => setOutputFormat("md"));
 els.fmtHtml.addEventListener("click", () => setOutputFormat("html"));

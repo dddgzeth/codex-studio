@@ -285,6 +285,22 @@ app.post("/api/sessions/:threadId/interrupt", async (req, res) => {
   }
 });
 
+app.patch("/api/sessions/:threadId", async (req, res) => {
+  try {
+    const name = typeof req.body.name === "string" ? req.body.name.trim() : null;
+    if (!name) {
+      res.status(400).json({ error: "name is required" });
+      return;
+    }
+    const activeId = await resolveActiveThreadId(req.params.threadId);
+    await codex.renameThread(activeId, name);
+    await syncThread(activeId);
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: String(error) });
+  }
+});
+
 app.delete("/api/sessions/:threadId", async (req, res) => {
   try {
     await codex.archiveThread(req.params.threadId);
