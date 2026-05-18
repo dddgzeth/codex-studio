@@ -6,7 +6,7 @@ dist
 npm-debug.log*
 .DS_Store
 .claude/
-images/
 crypto-quant-dashboard.html
 crypto-spot-arbitrage.md
 *.md
+!README.md
